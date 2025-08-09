@@ -1,0 +1,31 @@
+export const configs = {
+    SERVER_LOGS: false,
+    FILE_LOGS: false,
+    BROWSER: {
+        HEADLESS: false,
+        CHROME_PROFILE_PATH: '../browser/chrome_profile',
+        USER_AGENT: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+        ARGS: [
+            '--disable-blink-features=AutomationControlled',
+            '--disable-features=WebRtcHideLocalIpsWithMdns,BlockInsecurePrivateNetworkRequests',
+            '--enable-webgl',
+            '--ignore-gpu-blocklist',
+            '--disable-software-rasterizer',
+            '--no-first-run',
+            '--no-default-browser-check ',
+            '--disable-background-timer-throttling ',
+            '--disable-backgrounding-occluded-windows ',
+            '--disable-renderer-backgrounding',
+            '--metrics-recording-only',
+            '--disable-async-dns ',
+            '--hide-crash-restore-bubble ',
+        ],
+        HEADER: {
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'sec-ch-ua': '"Chromium";v="131", "Not_A Brand";v="24"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"macOS"',
+        },
+    },
+};
