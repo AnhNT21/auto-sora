@@ -1,20 +1,56 @@
 @echo off
-REM Change to your project directory
-cd /d "C:\Users\ADMIN\Desktop\A1\auto-sora\"
+setlocal EnableExtensions EnableDelayedExpansion
 
-echo Pulling latest changes...
-git pull
+rem === Disable Quick Edit just for this window ===
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$sig='using System; using System.Runtime.InteropServices; public static class K{ [DllImport(\"kernel32.dll\")] public static extern System.IntPtr GetStdHandle(int nStdHandle); [DllImport(\"kernel32.dll\")] public static extern bool GetConsoleMode(System.IntPtr h, out uint m); [DllImport(\"kernel32.dll\")] public static extern bool SetConsoleMode(System.IntPtr h, uint m);}'; Add-Type -TypeDefinition $sig -IgnoreWarnings | Out-Null; $h=[K]::GetStdHandle(-10); [uint32]$m=0; [K]::GetConsoleMode($h,[ref]$m) | Out-Null; $m = ($m -bor 0x80) -band (-bnot 0x40) -band (-bnot 0x20); [K]::SetConsoleMode($h,$m) | Out-Null" || echo (Quick Edit toggle skipped)
 
-echo Installing dependencies...
-npm install
+cd /d "C:\Users\ADMIN\Desktop\A\auto-sora\" || goto :fail
 
-echo Starting app...
-start "" cmd /c "npm start"
+echo [1/5] Checking for updates...
+set "UPTODATE="
+set "CHANGED="
+for /f "tokens=*" %%i in ('git --no-pager pull 2^>^&1') do (
+  set "line=%%i"
+  echo !line!
+  echo !line! | find /I "Already up to date." >nul && set "UPTODATE=1"
+  echo !line! | find /I "Fast-forward"        >nul && set "CHANGED=1"
+  echo !line! | find /I "Updating "           >nul && set "CHANGED=1"
+  echo !line! | find /I "files changed"       >nul && set "CHANGED=1"
+)
 
-REM Wait a bit for the server to boot (adjust as needed)
-timeout /t 5 /nobreak >nul
+if defined UPTODATE (
+  echo [2/5] Repo up to date — skip npm install.
+) else (
+  echo [2/5] Installing deps...
+  rem *** IMPORTANT: use CALL so script continues after npm.cmd ***
+  call npm install --no-fund --no-audit || goto :fail
+  cls
+  echo Dependencies installed.
+)
 
-echo Sending request to http://localhost:3000/auto ...
-curl http://localhost:3000/auto
+echo [3/5] Starting server...
+start /B "" cmd /c "npm start"
 
+timeout /t 1 /nobreak >nul
+
+echo [4/5] Waiting for http://localhost:3000 ...
+for /L %%I in (1,1,120) do (
+  >nul 2>&1 powershell -NoProfile -Command "try{ (Invoke-WebRequest -UseBasicParsing http://localhost:3000/ -TimeoutSec 1) | Out-Null; exit 0 } catch { exit 1 }"
+  if not errorlevel 1 goto :ready
+  timeout /t 1 /nobreak >nul
+)
+echo Server did not become ready within 120s.
+goto :fail
+
+:ready
+echo [5/5] Starting Automation...
+curl -sS http://localhost:3000/auto || goto :fail
+
+echo.
+echo Done. Logs above. Press Ctrl+C to stop the app.
+goto :eof
+
+:fail
+echo.
+echo ERROR. Keeping window open.
 pause
