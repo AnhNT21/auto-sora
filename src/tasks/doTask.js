@@ -60,12 +60,12 @@ export const doTask = async () => {
                 if (videoId) {
                     row.video_id = videoId;
                     row.status = 'success';
+                    console.log(`✅ Successfully generated video for prompt no. ${row.no}`);
                 } else {
                     console.error(`❌ Failed to generate video for prompt no. ${row.no}`);
                     row.status = 'failed';
                 }
 
-                console.log(`✅ Successfully generated video for prompt no. ${row.no}`);
                 console.log('⏳ Waiting before next generation...');
                 await delay(5000, 10000); // Wait 5-10 seconds
             } catch (error) {

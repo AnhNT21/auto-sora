@@ -56,6 +56,7 @@ export const generateVideoAPI = async (videoGenHeader, prompt, ref_img) => {
 
             if (ref_img) {
                 const uploadedImageId = await uploadImg(ref_img);
+                console.log('ref image uploaded');
                 config.data = JSON.stringify({
                     ...JSON.parse(config.data),
                     inpaint_items: [
@@ -82,14 +83,16 @@ export const generateVideoAPI = async (videoGenHeader, prompt, ref_img) => {
         } catch (error) {
             if (error.status === 429) {
                 console.log('Max concurrent requests reached, waiting for 5 minutes...');
+                await delay(180000, 200000); // Wait for 3-5 minutes
+                continue;
             } else if (error.status === 400) {
                 console.log(error.response);
                 console.log('Bad request, try get new token!');
                 return null;
             } else {
                 console.error('Error generating video:', error.response);
+                console.log('Retrying video generation...');
             }
-            console.log('Retrying video generation...');
             if (MAX_RETRIES-- <= 0) {
                 console.error('Max retries reached, exiting...');
                 return null; // Exit if max retries reached
@@ -142,7 +145,7 @@ const numberOfAvailableSlots = async () => {
     let config = {
         method: 'get',
         maxBodyLength: Infinity,
-        url: 'https://sora.chatgpt.com/backend/video_gen?limit=100',
+        url: 'https://sora.chatgpt.com/backend/video_gen?limit=5',
         headers: {
             accept: '*/*',
             'accept-language': 'en-US,en;q=0.9',
@@ -165,15 +168,17 @@ const numberOfAvailableSlots = async () => {
 
     try {
         const response = await axios.request(config);
-        const res = JSON.stringify(response.data);
-        if (res.task_responses) {
-            for (task of res.task_responses) {
-                if (task.status === 'succeeded' || task.status === 'cancelled') {
+        const tasks = response.data.task_responses;
+        if (tasks && tasks.length > 0) {
+            for (const task of tasks) {
+                if (!task.status === 'cancelled' || !task.status === 'succeeded') {
                     counter++;
                 }
             }
         }
-
+        if (counter > 0) {
+            console.log(`Current concurrent requests: ${counter}`);
+        }
         return counter;
     } catch (error) {
         console.error('Error checking concurrent requests:', error.response);
