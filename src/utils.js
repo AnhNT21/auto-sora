@@ -5,10 +5,10 @@ export const getExecutable = () => {
     const os = process.platform;
     switch (os) {
         case 'darwin':
-            return './browser/TitanBrowser.app/Contents/MacOS/TitanBrowser';
+            return configs.BROWSER.DARWIN_EXECUTABLE_PATH || '';
 
         case 'win32':
-            return './browser/TitanBrowser.exe';
+            return configs.BROWSER.WIN_EXECUTABLE_PATH || '';
 
         default:
             return null;

@@ -1,0 +1,181 @@
+import fs from 'fs';
+import axios from 'axios';
+import path from 'path';
+import FormData from 'form-data';
+import { fileURLToPath } from 'url';
+import { getVideoGenHeaders } from '../lib/browser.js';
+import { delay } from '../utils.js';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const MAX_CONCURRENT_REQUESTS = 1; // Adjust this based on your needs
+let MAX_RETRIES = 5; // Maximum number of retries for each request
+
+export const generateVideoAPI = async (videoGenHeader, prompt, ref_img) => {
+    const settings = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../settings.json'), 'utf-8'));
+    while (true) {
+        if ((await numberOfAvailableSlots()) >= MAX_CONCURRENT_REQUESTS) {
+            console.log('Max concurrent requests reached, waiting for available slots...');
+            await delay(180000, 200000); // Wait for 3-5 minutes
+            continue; // Retry after waiting
+        }
+        try {
+            let data = JSON.stringify({
+                type: 'video_gen',
+                operation: 'simple_compose',
+                prompt: prompt,
+                n_variants: settings.sora.n_variants,
+                n_frames: settings.sora.n_frames,
+                width: settings.sora.width,
+                height: settings.sora.height,
+                inpaint_items: [],
+                model: 'turbo',
+            });
+
+            let config = {
+                method: 'post',
+                maxBodyLength: Infinity,
+                url: 'https://sora.chatgpt.com/backend/video_gen',
+                headers: {
+                    accept: '*/*',
+                    'accept-language': 'en-US,en;q=0.9',
+                    'content-type': 'application/json',
+                    origin: 'https://sora.chatgpt.com',
+                    referer: 'https://sora.chatgpt.com/library',
+                    'sec-ch-ua': '"Chromium";v="131", "Not_A Brand";v="24"',
+                    'sec-ch-ua-mobile': '?0',
+                    'sec-ch-ua-platform': '"macOS"',
+                    'sec-fetch-dest': 'empty',
+                    'sec-fetch-mode': 'cors',
+                    'sec-fetch-site': 'same-origin',
+                    'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+                    ...videoGenHeader,
+                },
+                data: data,
+            };
+
+            if (ref_img) {
+                const uploadedImageId = await uploadImg(ref_img);
+                config.data = JSON.stringify({
+                    ...JSON.parse(config.data),
+                    inpaint_items: [
+                        {
+                            upload_media_id: uploadedImageId,
+                            frame_index: 0,
+                            generation_id: null,
+                            preset_id: null,
+                            source_end_frame: 0,
+                            source_start_frame: 0,
+                            type: 'image',
+                            uploaded_file_id: null,
+                            crop_bounds: {
+                                bounds: [0, 0, 1, 1],
+                            },
+                        },
+                    ],
+                });
+            }
+
+            const response = await axios.request(config);
+            console.log('Video generation request sent successfully:', response.data);
+            return response.data.id; // Return the video ID
+        } catch (error) {
+            if (error.status === 429) {
+                console.log('Max concurrent requests reached, waiting for 5 minutes...');
+            } else if (error.status === 400) {
+                console.log(error.response);
+                console.log('Bad request, try get new token!');
+                return null;
+            } else {
+                console.error('Error generating video:', error.response);
+            }
+            console.log('Retrying video generation...');
+            if (MAX_RETRIES-- <= 0) {
+                console.error('Max retries reached, exiting...');
+                return null; // Exit if max retries reached
+            }
+        }
+    }
+};
+
+const uploadImg = async (ref_img) => {
+    try {
+        const customHeaders = await getVideoGenHeaders();
+        const filePath = path.resolve(__dirname, `../../inputs/images/${ref_img}`);
+        const data = new FormData();
+
+        data.append('file', fs.createReadStream(filePath));
+        data.append('file_name', 'girl.webp');
+
+        const response = await axios.post('https://sora.chatgpt.com/backend/uploads', data, {
+            headers: {
+                origin: 'https://sora.chatgpt.com',
+                priority: 'u=1, i',
+                referer: 'https://sora.chatgpt.com/library',
+                'sec-ch-ua': '"Chromium";v="131", "Not_A Brand";v="24"',
+                'sec-ch-ua-mobile': '?0',
+                'sec-ch-ua-platform': '"macOS"',
+                'sec-fetch-dest': 'empty',
+                'sec-fetch-mode': 'cors',
+                'sec-fetch-site': 'same-origin',
+                'Content-Type': 'multipart/form-data',
+                'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+                authorization: customHeaders.authorization,
+                cookie: customHeaders.cookie,
+                priority: customHeaders.priority,
+                ...data.getHeaders(),
+            },
+            data: data,
+        });
+
+        // console.log(response.data.id);
+
+        return response.data.id;
+    } catch (error) {
+        console.error('Error uploading image:', error.response);
+        throw error;
+    }
+};
+
+const numberOfAvailableSlots = async () => {
+    const customHeaders = await getVideoGenHeaders();
+    let config = {
+        method: 'get',
+        maxBodyLength: Infinity,
+        url: 'https://sora.chatgpt.com/backend/video_gen?limit=100',
+        headers: {
+            accept: '*/*',
+            'accept-language': 'en-US,en;q=0.9',
+            'sec-ch-ua': '"Chromium";v="131", "Not_A Brand";v="24"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"macOS"',
+            'sec-fetch-dest': 'empty',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-site': 'same-origin',
+            Referer: 'https://sora.chatgpt.com/library',
+            'Referrer-Policy': 'strict-origin-when-cross-origin',
+            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+            authorization: customHeaders.authorization,
+            cookie: customHeaders.cookie,
+            priority: customHeaders.priority,
+        },
+    };
+
+    let counter = 0;
+
+    try {
+        const response = await axios.request(config);
+        const res = JSON.stringify(response.data);
+        if (res.task_responses) {
+            for (task of res.task_responses) {
+                if (task.status === 'succeeded' || task.status === 'cancelled') {
+                    counter++;
+                }
+            }
+        }
+
+        return counter;
+    } catch (error) {
+        console.error('Error checking concurrent requests:', error.response);
+    }
+};

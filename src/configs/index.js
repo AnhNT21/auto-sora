@@ -4,6 +4,8 @@ export const configs = {
     BROWSER: {
         HEADLESS: false,
         CHROME_PROFILE_PATH: '../browser/chrome_profile',
+        DARWIN_EXECUTABLE_PATH: './browser/TitanBrowser.app/Contents/MacOS/TitanBrowser',
+        WIN32_EXECUTABLE_PATH: 'C:/Users/ADMIN/Desktop/A1/auto-sora/browser/chrome.exe',
         USER_AGENT: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
         ARGS: [
             '--disable-blink-features=AutomationControlled',

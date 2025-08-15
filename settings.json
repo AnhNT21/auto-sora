@@ -1,0 +1,33 @@
+{
+    "sora": {
+        "video": {
+            // Cấu hình video chú ý tỷ lệ video
+            // [width, height]
+            // [480, 480] 1:1    => 480p (Vuông)
+            // [480, 854] 16:9   => 480p (Dọc)
+            // [854, 480] 9:16   => 480p (Ngang)
+            // ================================
+            // [720, 720] 1:1    => 720p (Vuông)
+            // [720, 1280] 16:9  => 720p (Dọc)
+            // [1280, 720] 9:16  => 720p (Ngang)
+            // ============= PRO ==============
+            // [1080, 1080] 1:1  => 1080p (Vuông)
+            // [1080, 1920] 16:9 => 1080p (Dọc)
+            // [1920, 1080] 9:16 => 1080p (Ngang)
+            "width": 854,
+            "height": 480,
+
+            // Số lượng khung hình trong video 30pfs
+            // 30fps = 30 khung hình mỗi giây
+            // => 150 khung hình = video 5 giây
+            // => 300 khung hình = video 10 giây
+            // => 450 khung hình = video 15 giây
+            // => 600 khung hình = video 20 giây
+            "n_frames": 150,
+
+            // Số lượng phiên bản video cho mỗi prompt
+            // 1, 2, 4
+            "n_variants": 1
+        }
+    }
+}
