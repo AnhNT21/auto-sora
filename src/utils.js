@@ -1,15 +1,17 @@
 import fs from 'fs';
+import path from 'path';
 import { configs } from './configs/index.js';
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export const getExecutable = () => {
     const os = process.platform;
     switch (os) {
         case 'darwin':
-            return configs.BROWSER.DARWIN_EXECUTABLE_PATH;
-
+            return path.resolve(__dirname, '../browser/TitanBrowser.app/Contents/MacOS/TitanBrowser');
         case 'win32':
-            return configs.BROWSER.WIN32_EXECUTABLE_PATH;
-
+            return path.resolve(__dirname, '../browser/browser/chrome.exe');
         default:
             return null;
     }

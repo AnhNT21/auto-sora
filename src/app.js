@@ -1,7 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import { doTask } from './tasks/doTask.js';
-import { attachVideoGenLoggerCDP, configurePage, newPage, openBrowser } from './lib/browser.js';
+import { configurePage, openBrowser } from './lib/browser.js';
 const app = express();
 
 dotenv.config();
@@ -11,7 +11,6 @@ app.get('/', (req, res) => {
     res.send('Server is running...');
 });
 
-// app.get('/auto', automationRouter);
 app.get('/auto', async (req, res) => {
     doTask();
     res.send('Task running... Check the server logs for progress.');

@@ -4,8 +4,6 @@ setlocal EnableExtensions EnableDelayedExpansion
 rem === Disable Quick Edit just for this window ===
 powershell -NoProfile -ExecutionPolicy Bypass -Command "$sig='using System; using System.Runtime.InteropServices; public static class K{ [DllImport(\"kernel32.dll\")] public static extern System.IntPtr GetStdHandle(int nStdHandle); [DllImport(\"kernel32.dll\")] public static extern bool GetConsoleMode(System.IntPtr h, out uint m); [DllImport(\"kernel32.dll\")] public static extern bool SetConsoleMode(System.IntPtr h, uint m);}'; Add-Type -TypeDefinition $sig -IgnoreWarnings | Out-Null; $h=[K]::GetStdHandle(-10); [uint32]$m=0; [K]::GetConsoleMode($h,[ref]$m) | Out-Null; $m = ($m -bor 0x80) -band (-bnot 0x40) -band (-bnot 0x20); [K]::SetConsoleMode($h,$m) | Out-Null" || echo (Quick Edit toggle skipped)
 
-cd /d "C:\Users\ADMIN\Desktop\A\auto-sora\" || goto :fail
-
 echo [1/5] Checking for updates...
 set "UPTODATE="
 set "CHANGED="
