@@ -5,10 +5,10 @@ export const getExecutable = () => {
     const os = process.platform;
     switch (os) {
         case 'darwin':
-            return configs.BROWSER.DARWIN_EXECUTABLE_PATH || '';
+            return configs.BROWSER.DARWIN_EXECUTABLE_PATH;
 
         case 'win32':
-            return configs.BROWSER.WIN_EXECUTABLE_PATH || '';
+            return configs.BROWSER.WIN32_EXECUTABLE_PATH;
 
         default:
             return null;
