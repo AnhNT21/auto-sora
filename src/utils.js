@@ -11,7 +11,7 @@ export const getExecutable = () => {
         case 'darwin':
             return path.resolve(__dirname, '../browser/TitanBrowser.app/Contents/MacOS/TitanBrowser');
         case 'win32':
-            return path.resolve(__dirname, '../browser/browser/chrome.exe');
+            return path.resolve(__dirname, '../browser/chrome.exe');
         default:
             return null;
     }
