@@ -29,7 +29,7 @@ export const doTask = async () => {
         try {
             if ((await getVideoGenHeaders()) === null) {
                 console.log('🔑 No valid tokens found, opening browser to get new tokens...');
-                browser = await openBrowser(true);
+                browser = await openBrowser();
                 pages = await browser.pages();
                 page = pages[0];
                 page = await configurePage(page);

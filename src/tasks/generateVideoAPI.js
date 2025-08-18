@@ -144,6 +144,8 @@ const uploadImg = async (ref_img) => {
 
 const numberOfAvailableSlots = async () => {
     const customHeaders = await getVideoGenHeaders();
+    if (!customHeaders) return MAX_CONCURRENT_REQUESTS * 2;
+
     let config = {
         method: 'get',
         maxBodyLength: Infinity,
