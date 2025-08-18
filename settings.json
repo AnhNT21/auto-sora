@@ -1,7 +1,7 @@
 {
     "sora": {
-        "width": 854,
-        "height": 480,
+        "width": 1280,
+        "height": 720,
         "n_frames": 150,
         "n_variants": 1
     }

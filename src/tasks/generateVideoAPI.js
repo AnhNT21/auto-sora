@@ -1,22 +1,24 @@
 import fs from 'fs';
-import axios from 'axios';
 import path from 'path';
+import axios from 'axios';
 import FormData from 'form-data';
+import { delay } from '../utils.js';
 import { fileURLToPath } from 'url';
 import { getVideoGenHeaders } from '../lib/browser.js';
-import { delay } from '../utils.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const STATUS_POLLING_INTERVAL = { min: 10000, max: 10000 };
 const MAX_CONCURRENT_REQUESTS = 1; // Adjust this based on your needs
 let MAX_RETRIES = 5; // Maximum number of retries for each request
 
 export const generateVideoAPI = async (videoGenHeader, prompt, ref_img) => {
     const settings = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../settings.json'), 'utf-8'));
     while (true) {
-        if ((await numberOfAvailableSlots()) >= MAX_CONCURRENT_REQUESTS) {
-            console.log('Max concurrent requests reached, waiting for available slots...');
-            await delay(180000, 200000); // Wait for 3-5 minutes
+        const numberOFSlots = await numberOfAvailableSlots();
+        if (numberOFSlots >= MAX_CONCURRENT_REQUESTS) {
+            console.log(`Max concurrent requests reached, waiting ${STATUS_POLLING_INTERVAL.max / 1000}s for available slots...`);
+            await delay(STATUS_POLLING_INTERVAL.min, STATUS_POLLING_INTERVAL.max); // Wait for 30 s
             continue; // Retry after waiting
         }
         try {
@@ -82,15 +84,15 @@ export const generateVideoAPI = async (videoGenHeader, prompt, ref_img) => {
             return response.data.id; // Return the video ID
         } catch (error) {
             if (error.status === 429) {
-                console.log('Max concurrent requests reached, waiting for 5 minutes...');
-                await delay(180000, 200000); // Wait for 3-5 minutes
+                console.log('Max concurrent requests reached, waiting for 2 Minute...');
+                await delay(60000, 120000); // Wait for 1-2 minutes
                 continue;
             } else if (error.status === 400) {
                 console.log(error.response);
                 console.log('Bad request, try get new token!');
                 return null;
             } else {
-                console.error('Error generating video:', error.response);
+                console.error('Error generating video:', error.response.data);
                 console.log('Retrying video generation...');
             }
             if (MAX_RETRIES-- <= 0) {
@@ -135,7 +137,7 @@ const uploadImg = async (ref_img) => {
 
         return response.data.id;
     } catch (error) {
-        console.error('Error uploading image:', error.response);
+        console.error('Error uploading image:', error.response.data);
         throw error;
     }
 };
@@ -171,7 +173,7 @@ const numberOfAvailableSlots = async () => {
         const tasks = response.data.task_responses;
         if (tasks && tasks.length > 0) {
             for (const task of tasks) {
-                if (!task.status === 'cancelled' || !task.status === 'succeeded') {
+                if (!['succeeded', 'cancelled'].includes(task.status)) {
                     counter++;
                 }
             }
@@ -181,6 +183,8 @@ const numberOfAvailableSlots = async () => {
         }
         return counter;
     } catch (error) {
-        console.error('Error checking concurrent requests:', error.response);
+        console.error('Error checking concurrent requests:', error.response.data);
     }
 };
+
+numberOfAvailableSlots();

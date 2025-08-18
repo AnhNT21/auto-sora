@@ -93,3 +93,5 @@ jspm_packages/
 browser
 
 inputs
+
+src/configs/header.json

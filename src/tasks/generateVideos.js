@@ -112,7 +112,7 @@ export const getTokens = async (page) => {
         // await page.click("xpath///a[contains(@href,'task_')]//button");
         await page.evaluate(() => document.querySelector('a[href*="task_"] button').click());
         console.log('Clicking Cancel button to stop Video generation...');
-        await delay(1000, 2000);
+        await delay(2000, 3000);
         await page.click("xpath///button[text()='Confirm']");
         await delay(3000, 5000);
         console.log('Tokens generated successfully, closing browser...');

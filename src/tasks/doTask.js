@@ -1,10 +1,10 @@
 import path from 'path';
-import { fileURLToPath } from 'url';
 import XLSX from 'xlsx';
-import { generateVideos, getTokens } from './generateVideos.js';
 import { delay } from '../utils.js';
-import { attachVideoGenLoggerCDP, closeBrowser, configurePage, getVideoGenHeaders, openBrowser } from '../lib/browser.js';
+import { getTokens } from './generateVideos.js';
+import { fileURLToPath } from 'url';
 import { generateVideoAPI } from './generateVideoAPI.js';
+import { attachVideoGenLoggerCDP, closeBrowser, configurePage, getVideoGenHeaders, openBrowser } from '../lib/browser.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
