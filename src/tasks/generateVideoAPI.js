@@ -175,7 +175,7 @@ const numberOfAvailableSlots = async () => {
         const tasks = response.data.task_responses;
         if (tasks && tasks.length > 0) {
             for (const task of tasks) {
-                if (!['succeeded', 'cancelled'].includes(task.status)) {
+                if (!['succeeded', 'failed', 'cancelled'].includes(task.status)) {
                     counter++;
                 }
             }
