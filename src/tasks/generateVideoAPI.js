@@ -4,7 +4,7 @@ import axios from 'axios';
 import FormData from 'form-data';
 import { delay } from '../utils.js';
 import { fileURLToPath } from 'url';
-import { getVideoGenHeaders } from '../lib/browser.js';
+import { getVideoGenHeaders, resetVideoGenHeaders } from '../lib/browser.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -87,9 +87,10 @@ export const generateVideoAPI = async (videoGenHeader, prompt, ref_img) => {
                 console.log('Max concurrent requests reached, waiting for 2 Minute...');
                 await delay(60000, 120000); // Wait for 1-2 minutes
                 continue;
-            } else if (error.status === 400) {
+            } else if (error.status >= 400) {
                 console.log(error.response);
                 console.log('Bad request, try get new token!');
+                resetVideoGenHeaders();
                 return null;
             } else {
                 console.error('Error generating video:', error.response.data);

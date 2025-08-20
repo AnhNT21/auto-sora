@@ -5,7 +5,6 @@ import { getExecutable } from '../utils.js';
 import { fileURLToPath } from 'url';
 import { writeFileSync, readFileSync } from 'fs';
 import path from 'path';
-import { get } from 'http';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -157,5 +156,6 @@ export const getVideoGenHeaders = async () => {
 };
 
 export const resetVideoGenHeaders = () => {
+    writeFileSync(path.join(__dirname, '../configs/header.json'), '{}', null, 2), 'utf-8';
     videoGenHeaders = null;
 };
