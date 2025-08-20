@@ -5,9 +5,9 @@ REM === Disable Quick Edit/Insert for THIS console window only ===
 powershell -NoProfile -ExecutionPolicy Bypass -Command "$sig='using System; using System.Runtime.InteropServices; public static class K{ [DllImport(\"kernel32.dll\")] public static extern System.IntPtr GetStdHandle(int nStdHandle); [DllImport(\"kernel32.dll\")] public static extern bool GetConsoleMode(System.IntPtr h, out uint m); [DllImport(\"kernel32.dll\")] public static extern bool SetConsoleMode(System.IntPtr h, uint m);}'; Add-Type -TypeDefinition $sig -IgnoreWarnings | Out-Null; $h=[K]::GetStdHandle(-10); [uint32]$m=0; [K]::GetConsoleMode($h,[ref]$m) | Out-Null; $m = ($m -bor 0x80) -band (-bnot 0x40) -band (-bnot 0x20); [K]::SetConsoleMode($h,$m) | Out-Null" || echo ^(Quick Edit toggle skipped^)
 
 REM =========================
-REM [0/5] Repo status & remote updates
+REM [0/5] Reset repo to remote
 REM =========================
-echo [0/5] Checking for updates...
+echo [0/5] Resetting repo to remote...
 
 git rev-parse --is-inside-work-tree >nul 2>&1 || (
   echo Not a git repository. Aborting.
@@ -34,43 +34,17 @@ if not defined UPSTREAM (
   goto :fail
 )
 
+echo   - Fetching latest remote state...
 git fetch --all --prune --tags --quiet
 
-set "WT_CHANGED=0"
-git update-index -q --refresh
-git diff --quiet --ignore-submodules -- || set "WT_CHANGED=1"
+echo   - Discarding all local changes and aligning with %UPSTREAM%...
+git reset --hard %UPSTREAM%
+git clean -fd
 
-set "AHEAD=0"
-set "BEHIND=0"
-for /f %%a in ('git rev-list --count @{u}..HEAD 2^>nul') do set "AHEAD=%%a"
-for /f %%b in ('git rev-list --count HEAD..@{u} 2^>nul') do set "BEHIND=%%b"
-
-if "%WT_CHANGED%"=="1" (
-  echo   - Working tree: changes detected
-) else (
-  echo   - Working tree: clean
-)
-echo   - Commits ahead of remote: %AHEAD%
-echo   - Commits behind remote: %BEHIND%
-
-if not "%BEHIND%"=="0" (
-  echo [1/5] Remote updates found on %UPSTREAM%. Pulling...
-  git pull --ff-only || (
-    echo Pull failed. Resolve conflicts and rerun.
-    goto :fail
-  )
-  echo.
-  echo ============================
-  echo Updates were pulled successfully.
-  echo Please CLOSE this window and RUN the script again to apply changes.
-  echo ============================
-  goto :eof
-)
-
-echo [1/5] Repo up to date.
+echo [1/5] Repo reset complete.
 
 REM =========================
-REM [2/5] Install deps if needed (robust check without fragile FOR|FIND)
+REM [2/5] Install deps if needed
 REM =========================
 set "NEED_NPM=0"
 git diff --name-only -- package.json package-lock.json npm-shrinkwrap.json 2>nul | findstr /r /c:"^" >nul && set "NEED_NPM=1"
@@ -95,7 +69,7 @@ start "" /B cmd /c "npm start"
 timeout /t 1 /nobreak >nul
 
 REM =========================
-REM [4/5] Wait for server (PS moved to label to avoid () in FOR block)
+REM [4/5] Wait for server
 REM =========================
 echo [4/5] Waiting for http://localhost:3000 ...
 for /L %%I in (1,1,120) do (
@@ -118,7 +92,6 @@ echo Done. Press Ctrl+C to stop the app.
 goto :eof
 
 :_pingHttp
-REM %~1 = URL
 powershell -NoProfile -Command "try { Invoke-WebRequest -UseBasicParsing %~1 -TimeoutSec 1 ^| Out-Null; exit 0 } catch { exit 1 }"
 exit /b %errorlevel%
 
