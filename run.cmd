@@ -7,7 +7,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "$sig='using System; usin
 REM =========================
 REM [0/5] Reset repo to remote
 REM =========================
-echo [0/5] Resetting repo to remote...
+echo [0/5] Checking for updates...
 
 git rev-parse --is-inside-work-tree >nul 2>&1 || (
   echo Not a git repository. Aborting.
@@ -50,7 +50,7 @@ set "NEED_NPM=0"
 git diff --name-only -- package.json package-lock.json npm-shrinkwrap.json 2>nul | findstr /r /c:"^" >nul && set "NEED_NPM=1"
 
 if "%NEED_NPM%"=="1" goto :install_deps
-echo [2/5] Skipping npm install (no package changes).
+echo [2/5] Skipping npm install.
 goto :after_npm
 
 :install_deps
@@ -71,10 +71,9 @@ timeout /t 1 /nobreak >nul
 REM =========================
 REM [4/5] Wait for server
 REM =========================
-echo [4/5] Waiting for http://localhost:3000 ...
+echo [4/5] Waiting for http://127.0.0.1:3000 ...
 for /L %%I in (1,1,120) do (
-  call :_pingHttp "http://localhost:3000/"
-  if not errorlevel 1 goto :ready
+  curl --silent --fail --max-time 2 http://127.0.0.1:3000/ >nul 2>&1 && goto :ready
   timeout /t 1 /nobreak >nul
 )
 echo Server did not become ready within 120s.
