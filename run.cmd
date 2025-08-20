@@ -1,18 +1,12 @@
 @echo off
-setlocal EnableExtensions EnableDelayedExpansion
+setlocal EnableExtensions DisableDelayedExpansion
 
-rem === Disable Quick Edit/Insert for THIS console window only ===
-powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$sig='using System; using System.Runtime.InteropServices; public static class K{ [DllImport(\"kernel32.dll\")] public static extern System.IntPtr GetStdHandle(int nStdHandle); [DllImport(\"kernel32.dll\")] public static extern bool GetConsoleMode(System.IntPtr h, out uint m); [DllImport(\"kernel32.dll\")] public static extern bool SetConsoleMode(System.IntPtr h, uint m);}';" ^
-  "Add-Type -TypeDefinition $sig -IgnoreWarnings | Out-Null;" ^
-  "$h=[K]::GetStdHandle(-10); [uint32]$m=0; [K]::GetConsoleMode($h,[ref]$m) | Out-Null;" ^
-  "$m = ($m -bor 0x80) -band (-bnot 0x40) -band (-bnot 0x20);" ^
-  "[K]::SetConsoleMode($h,$m) | Out-Null" ^
-  || echo (Quick Edit toggle skipped)
+REM === Disable Quick Edit/Insert for THIS console window only ===
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$sig='using System; using System.Runtime.InteropServices; public static class K{ [DllImport(\"kernel32.dll\")] public static extern System.IntPtr GetStdHandle(int nStdHandle); [DllImport(\"kernel32.dll\")] public static extern bool GetConsoleMode(System.IntPtr h, out uint m); [DllImport(\"kernel32.dll\")] public static extern bool SetConsoleMode(System.IntPtr h, uint m);}'; Add-Type -TypeDefinition $sig -IgnoreWarnings | Out-Null; $h=[K]::GetStdHandle(-10); [uint32]$m=0; [K]::GetConsoleMode($h,[ref]$m) | Out-Null; $m = ($m -bor 0x80) -band (-bnot 0x40) -band (-bnot 0x20); [K]::SetConsoleMode($h,$m) | Out-Null" || echo ^(Quick Edit toggle skipped^)
 
-rem =========================
-rem [0/5] Repo status & remote updates
-rem =========================
+REM =========================
+REM [0/5] Repo status & remote updates
+REM =========================
 echo [0/5] Checking for updates...
 
 git rev-parse --is-inside-work-tree >nul 2>&1 || (
@@ -43,8 +37,8 @@ if not defined UPSTREAM (
 git fetch --all --prune --tags --quiet
 
 set "WT_CHANGED=0"
-for /f %%c in ('git status --porcelain -uno ^| find /v /c ""') do set "WT_COUNT=%%c"
-if not "%WT_COUNT%"=="0" set "WT_CHANGED=1"
+git update-index -q --refresh
+git diff --quiet --ignore-submodules -- || set "WT_CHANGED=1"
 
 set "AHEAD=0"
 set "BEHIND=0"
@@ -75,35 +69,37 @@ if not "%BEHIND%"=="0" (
 
 echo [1/5] Repo up to date.
 
-rem =========================
-rem [2/5] Install deps if needed
-rem =========================
-for /f "tokens=*" %%i in ('git --no-pager status -s 2^>nul') do set "DUMMY=%%i"
-if defined DUMMY (
-  echo [2/5] Installing deps...
-  set "DUMMY="
-  call npm install --no-fund --no-audit --silent || goto :fail
-  cls
-  echo Dependencies installed.
-) else (
-  echo [2/5] Skipping npm install (no changes).
-)
+REM =========================
+REM [2/5] Install deps if needed (robust check without fragile FOR|FIND)
+REM =========================
+set "NEED_NPM=0"
+git diff --name-only -- package.json package-lock.json npm-shrinkwrap.json 2>nul | findstr /r /c:"^" >nul && set "NEED_NPM=1"
 
-rem =========================
-rem [3/5] Start server (same console, Quick Edit disabled)
-rem =========================
+if "%NEED_NPM%"=="1" goto :install_deps
+echo [2/5] Skipping npm install (no package changes).
+goto :after_npm
+
+:install_deps
+echo [2/5] Installing deps...
+call npm install --no-fund --no-audit --silent || goto :fail
+cls
+echo Dependencies installed.
+
+:after_npm
+
+REM =========================
+REM [3/5] Start server (same console, Quick Edit disabled)
+REM =========================
 echo [3/5] Starting server...
-rem Use START /B to avoid a new window (so Quick Edit setting applies).
 start "" /B cmd /c "npm start"
-rem small delay to let Node boot before the health checks
 timeout /t 1 /nobreak >nul
 
-rem =========================
-rem [4/5] Wait for server
-rem =========================
+REM =========================
+REM [4/5] Wait for server (PS moved to label to avoid () in FOR block)
+REM =========================
 echo [4/5] Waiting for http://localhost:3000 ...
 for /L %%I in (1,1,120) do (
-  >nul 2>&1 powershell -NoProfile -Command "try{ (Invoke-WebRequest -UseBasicParsing http://localhost:3000/ -TimeoutSec 1) | Out-Null; exit 0 } catch { exit 1 }"
+  call :_pingHttp "http://localhost:3000/"
   if not errorlevel 1 goto :ready
   timeout /t 1 /nobreak >nul
 )
@@ -111,15 +107,20 @@ echo Server did not become ready within 120s.
 goto :fail
 
 :ready
-rem =========================
-rem [5/5] Trigger automation endpoint
-rem =========================
+REM =========================
+REM [5/5] Trigger automation endpoint
+REM =========================
 echo [5/5] Hitting automation endpoint...
 curl -sS http://localhost:3000/auto || goto :fail
 
 echo.
 echo Done. Press Ctrl+C to stop the app.
 goto :eof
+
+:_pingHttp
+REM %~1 = URL
+powershell -NoProfile -Command "try { Invoke-WebRequest -UseBasicParsing %~1 -TimeoutSec 1 ^| Out-Null; exit 0 } catch { exit 1 }"
+exit /b %errorlevel%
 
 :fail
 echo.
