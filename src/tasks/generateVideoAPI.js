@@ -90,7 +90,7 @@ export const generateVideoAPI = async (videoGenHeader, prompt, ref_img) => {
             } else if (error.status >= 400) {
                 console.log(error.response);
                 console.log('Bad request, try get new token!');
-                resetVideoGenHeaders();
+                // resetVideoGenHeaders();
                 return null;
             } else {
                 console.error('Error generating video:', error.response.data);
@@ -189,5 +189,3 @@ const numberOfAvailableSlots = async () => {
         console.error('Error checking concurrent requests:', error.response.data);
     }
 };
-
-numberOfAvailableSlots();
