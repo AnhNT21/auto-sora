@@ -2,6 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import { doTask } from './tasks/doTask.js';
 import { configurePage, openBrowser } from './lib/browser.js';
+import { getTokens } from './tasks/generateVideos.js';
 const app = express();
 
 dotenv.config();
@@ -21,6 +22,8 @@ app.get('/browser', async (req, res) => {
     const pages = await browser.pages();
     let page = pages[0];
     page = await configurePage(page);
+    await attachVideoGenLoggerCDP(page);
+    await getTokens(page);
 
     res.send('Browser opened and page configured. Check the server logs for details.');
 });
